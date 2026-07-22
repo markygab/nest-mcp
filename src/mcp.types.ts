@@ -42,6 +42,42 @@ export type McpToolOptions<
   title?: string;
 };
 
+/**
+ * Context supplied to MCP guards and interceptors after a tool's input has
+ * been validated.
+ */
+export type McpExecutionContext = {
+  /** The name assigned by {@link McpTools}. */
+  serverName: string;
+  /** The public MCP tool name. */
+  toolName: string;
+  /** The TypeBox-validated arguments that will be passed to the handler. */
+  validatedArgs: unknown;
+  /** Trusted request data supplied by the host application. */
+  requestContext: McpRequestContext;
+  /** The decorated method name on the MCP tools provider. */
+  methodName: string;
+  /** The metadata declared with {@link McpTool}. */
+  toolOptions: McpToolOptions;
+};
+
+/**
+ * A policy hook that decides whether an MCP tool invocation may proceed.
+ */
+export interface McpGuard {
+  canActivate(context: McpExecutionContext): boolean | Promise<boolean>;
+}
+
+/**
+ * A hook that wraps a permitted MCP tool invocation.
+ */
+export interface McpInterceptor {
+  intercept(
+    context: McpExecutionContext,
+    next: () => Promise<unknown>,
+  ): Promise<unknown>;
+}
+
 export type McpParamKind = "args" | "context";
 
 export type McpParamMetadata = {
@@ -52,6 +88,8 @@ export type McpParamMetadata = {
 export type McpDiscoveredTool = {
   annotations?: ToolAnnotations;
   description: string;
+  guards?: McpGuard[];
+  interceptors?: McpInterceptor[];
   handler: (...args: unknown[]) => Promise<unknown> | unknown;
   inputSchema: TObject;
   instance: object;

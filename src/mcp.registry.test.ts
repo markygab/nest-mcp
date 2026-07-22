@@ -4,7 +4,14 @@ import { MetadataScanner, Reflector } from "@nestjs/core";
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it } from "vitest";
 
-import { McpArgs, McpContext, McpTool, McpTools } from "./mcp.decorators.js";
+import {
+  McpArgs,
+  McpContext,
+  McpTool,
+  McpTools,
+  UseMcpGuards,
+  UseMcpInterceptors,
+} from "./mcp.decorators.js";
 import { McpRegistry } from "./mcp.registry.js";
 
 @McpTools("example_mcp")
@@ -38,6 +45,27 @@ class OtherMcpTools {
     name: "list_other_tasks",
   })
   listOtherTasks() {
+    return {};
+  }
+}
+
+const classGuard = { canActivate: () => true };
+const methodGuard = { canActivate: () => true };
+const classInterceptor = { intercept: async (_context: object, next: () => Promise<unknown>) => next() };
+const methodInterceptor = { intercept: async (_context: object, next: () => Promise<unknown>) => next() };
+
+@McpTools("guarded_mcp")
+@UseMcpGuards(classGuard)
+@UseMcpInterceptors(classInterceptor)
+class GuardedMcpTools {
+  @McpTool({
+    description: "Run a guarded tool",
+    inputSchema: Type.Object({}),
+    name: "guarded_tool",
+  })
+  @UseMcpGuards(methodGuard)
+  @UseMcpInterceptors(methodInterceptor)
+  guardedTool() {
     return {};
   }
 }
@@ -96,6 +124,32 @@ describe("McpRegistry", () => {
     expect(registry.discoverTools("jira_mcp")).toEqual([]);
     expect(registry.discoverTools("other_mcp")).toMatchObject([
       { name: "list_other_tasks" },
+    ]);
+  });
+
+  it("collects class and method guard and interceptor metadata independently", () => {
+    const registry = new McpRegistry(
+      {
+        getProviders: () => [
+          {
+            instance: new GuardedMcpTools(),
+            metatype: GuardedMcpTools,
+          },
+        ],
+      } as never,
+      new MetadataScanner(),
+      new Reflector(),
+    );
+
+    const [tool] = registry.discoverTools("guarded_mcp");
+
+    expect(tool?.guards).toEqual([
+      classGuard,
+      methodGuard,
+    ]);
+    expect(tool?.interceptors).toEqual([
+      classInterceptor,
+      methodInterceptor,
     ]);
   });
 });

@@ -92,6 +92,78 @@ Tool names must be unique within a named server. Keep handlers thin: enforce
 application policy and call existing domain services rather than placing
 vendor-client or persistence logic in MCP classes.
 
+## Guard tool invocations
+
+`@UseMcpGuards()` attaches policy-agnostic guards to a tools class or an
+individual tool. Guards run after the input schema is validated and before the
+handler. Class guards run first, followed by method guards. Return `false` or
+throw to prevent invocation; the caller receives the normal MCP tool error
+response.
+
+```ts
+import {
+  McpArgs,
+  McpTool,
+  McpTools,
+  UseMcpGuards,
+  type McpExecutionContext,
+  type McpGuard,
+} from "@markygab/nest-mcp";
+
+const auditGuard: McpGuard = {
+  canActivate(context: McpExecutionContext) {
+    // validatedArgs, serverName, toolName, requestContext, and toolOptions
+    // are available here. Application policy remains outside this library.
+    return true;
+  },
+};
+
+@McpTools("projects_mcp")
+@UseMcpGuards(auditGuard)
+class ProjectsMcp {
+  @McpTool({ name: "projects_get", description: "Get a project", inputSchema: GetProjectInput })
+  @UseMcpGuards({ canActivate: () => true })
+  getProject(@McpArgs() input: GetProjectInput) {
+    return { project: input.id };
+  }
+}
+```
+
+## Intercept tool invocations
+
+`@UseMcpInterceptors()` wraps a permitted tool invocation. It accepts
+`McpInterceptor` objects and may be applied to a tools class or a single tool.
+Interceptors receive the same `McpExecutionContext` as guards, including the
+validated arguments and trusted request context. Class interceptors enter in
+declaration order, then method interceptors; they unwind in reverse order.
+Thrown errors propagate to the standard MCP tool error response.
+
+```ts
+import {
+  UseMcpInterceptors,
+  type McpExecutionContext,
+  type McpInterceptor,
+} from "@markygab/nest-mcp";
+
+const timingInterceptor: McpInterceptor = {
+  async intercept(context: McpExecutionContext, next) {
+    const startedAt = Date.now();
+
+    try {
+      return await next();
+    } finally {
+      // Hosts decide whether and where to record this information.
+      console.log(context.toolName, Date.now() - startedAt);
+    }
+  },
+};
+
+@UseMcpInterceptors(timingInterceptor)
+class ProjectsMcp {
+  // @UseMcpInterceptors(...) can also be applied to an @McpTool() method.
+}
+```
+
 ## Request context and policy
 
 `McpRequestContext` contains common request identifiers, optional actor and

@@ -5,9 +5,13 @@ import {
   MCP_TOOL_METADATA,
   MCP_TOOL_PARAMS_METADATA,
   MCP_TOOLS_CLASS_METADATA,
+  MCP_GUARDS_METADATA,
+  MCP_INTERCEPTORS_METADATA,
 } from "./mcp.constants.js";
 import type {
   McpDiscoveredTool,
+  McpGuard,
+  McpInterceptor,
   McpParamMetadata,
   McpToolOptions,
 } from "./mcp.types.js";
@@ -69,9 +73,32 @@ export class McpRegistry {
               methodName,
             ) as McpParamMetadata[] | undefined) ?? [];
 
+          const classGuards =
+            this.reflector.get<McpGuard[] | undefined>(
+              MCP_GUARDS_METADATA,
+              metatype,
+            ) ?? [];
+          const methodGuards =
+            this.reflector.get<McpGuard[] | undefined>(
+              MCP_GUARDS_METADATA,
+              methodRef,
+            ) ?? [];
+          const classInterceptors =
+            this.reflector.get<McpInterceptor[] | undefined>(
+              MCP_INTERCEPTORS_METADATA,
+              metatype,
+            ) ?? [];
+          const methodInterceptors =
+            this.reflector.get<McpInterceptor[] | undefined>(
+              MCP_INTERCEPTORS_METADATA,
+              methodRef,
+            ) ?? [];
+
           tools.push({
             annotations: toolMetadata.annotations,
             description: toolMetadata.description,
+            guards: [...classGuards, ...methodGuards],
+            interceptors: [...classInterceptors, ...methodInterceptors],
             handler: methodRef.bind(instance),
             inputSchema: toolMetadata.inputSchema,
             instance,

@@ -51,6 +51,7 @@ export class McpServerService {
     context: McpRequestContext,
   ): Promise<CallToolResult> {
     return this.callToolFromTools(
+      serverName,
       this.filterTools(this.getInstance(serverName).tools, context),
       name,
       args,
@@ -59,6 +60,7 @@ export class McpServerService {
   }
 
   private async callToolFromTools(
+    serverName: string,
     tools: Map<string, McpDiscoveredTool>,
     name: string,
     args: unknown,
@@ -73,7 +75,7 @@ export class McpServerService {
     try {
       const startedAt = Date.now();
       const result = await withMcpToolTimeout(
-        this.invoker.invoke(tool, args, context),
+        this.invoker.invoke(serverName, tool, args, context),
       );
 
       if (tool.outputSchema) {
@@ -187,6 +189,7 @@ export class McpServerService {
       const context = this.contextFactory.create(extra, contextOverrides);
 
       return this.callToolFromTools(
+        serverName,
         this.filterTools(tools, context),
         request.params.name,
         request.params.arguments ?? {},

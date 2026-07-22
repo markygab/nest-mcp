@@ -2,9 +2,12 @@ import { Type } from "@sinclair/typebox";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { McpServerService } from "./mcp.server.js";
+import { McpInvoker } from "./mcp.invoker.js";
+import { McpValidationService } from "./mcp.validation.js";
 
 const tool = {
   description: "Example tool",
+  guards: [],
   handler: vi.fn(),
   inputSchema: Type.Object({}),
   instance: {},
@@ -69,5 +72,28 @@ describe("McpServerService", () => {
         { requestId: "request-1" },
       ),
     ).resolves.toMatchObject({ isError: true });
+  });
+
+  it("returns the standard MCP error result when a guard denies invocation", async () => {
+    const deniedHandler = vi.fn();
+    const guardedTool = {
+      ...tool,
+      guards: [{ canActivate: () => false }],
+      handler: deniedHandler,
+    };
+    const service = new McpServerService(
+      { create: vi.fn() } as never,
+      new McpInvoker(new McpValidationService()),
+      { discoverTools: vi.fn().mockReturnValue([guardedTool]) } as never,
+      new McpValidationService(),
+    );
+
+    await expect(
+      service.callTool("example_mcp", "example_tool", {}, { requestId: "request-1" }),
+    ).resolves.toMatchObject({
+      content: [{ text: "MCP tool 'example_tool' invocation denied by guard" }],
+      isError: true,
+    });
+    expect(deniedHandler).not.toHaveBeenCalled();
   });
 });

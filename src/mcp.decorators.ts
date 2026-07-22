@@ -5,8 +5,12 @@ import {
   MCP_TOOL_METADATA,
   MCP_TOOL_PARAMS_METADATA,
   MCP_TOOLS_CLASS_METADATA,
+  MCP_GUARDS_METADATA,
+  MCP_INTERCEPTORS_METADATA,
 } from "./mcp.constants.js";
 import type {
+  McpGuard,
+  McpInterceptor,
   McpParamKind,
   McpParamMetadata,
   McpToolOptions,
@@ -21,6 +25,23 @@ export const McpTool = <
 >(
   options: McpToolOptions<TInputSchema, TOutputSchema>,
 ): MethodDecorator => SetMetadata(MCP_TOOL_METADATA, options);
+
+/**
+ * Attaches guards to an MCP tools provider or an individual tool method.
+ * Provider guards run before method guards.
+ */
+export const UseMcpGuards = (
+  ...guards: McpGuard[]
+): ClassDecorator & MethodDecorator => SetMetadata(MCP_GUARDS_METADATA, guards);
+
+/**
+ * Attaches interceptors to an MCP tools provider or an individual tool method.
+ * Provider interceptors wrap method interceptors.
+ */
+export const UseMcpInterceptors = (
+  ...interceptors: McpInterceptor[]
+): ClassDecorator & MethodDecorator =>
+  SetMetadata(MCP_INTERCEPTORS_METADATA, interceptors);
 
 const defineParamMetadata =
   (kind: McpParamKind): ParameterDecorator =>
