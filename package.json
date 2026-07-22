@@ -1,6 +1,6 @@
 {
   "name": "@markygab/nest-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Decorator-based Model Context Protocol servers for NestJS.",
   "license": "MIT",
   "type": "module",
