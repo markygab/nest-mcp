@@ -10,7 +10,9 @@ import {
 } from "./mcp.constants.js";
 import type {
   McpGuard,
+  McpGuardReference,
   McpInterceptor,
+  McpInterceptorReference,
   McpParamKind,
   McpParamMetadata,
   McpToolOptions,
@@ -31,7 +33,7 @@ export const McpTool = <
  * Provider guards run before method guards.
  */
 export const UseMcpGuards = (
-  ...guards: McpGuard[]
+  ...guards: McpGuardReference[]
 ): ClassDecorator & MethodDecorator => SetMetadata(MCP_GUARDS_METADATA, guards);
 
 /**
@@ -39,7 +41,7 @@ export const UseMcpGuards = (
  * Provider interceptors wrap method interceptors.
  */
 export const UseMcpInterceptors = (
-  ...interceptors: McpInterceptor[]
+  ...interceptors: McpInterceptorReference[]
 ): ClassDecorator & MethodDecorator =>
   SetMetadata(MCP_INTERCEPTORS_METADATA, interceptors);
 

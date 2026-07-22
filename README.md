@@ -98,9 +98,11 @@ vendor-client or persistence logic in MCP classes.
 individual tool. Guards run after the input schema is validated and before the
 handler. Class guards run first, followed by method guards. Return `false` or
 throw to prevent invocation; the caller receives the normal MCP tool error
-response.
+response. Pass either a guard instance or an injectable Nest provider class;
+provider classes are resolved from the application container.
 
 ```ts
+import { Injectable } from "@nestjs/common";
 import {
   McpArgs,
   McpTool,
@@ -118,8 +120,15 @@ const auditGuard: McpGuard = {
   },
 };
 
+@Injectable()
+class ProjectsAccessGuard implements McpGuard {
+  canActivate(context: McpExecutionContext) {
+    return Boolean(context.requestContext.actorId);
+  }
+}
+
 @McpTools("projects_mcp")
-@UseMcpGuards(auditGuard)
+@UseMcpGuards(auditGuard, ProjectsAccessGuard)
 class ProjectsMcp {
   @McpTool({ name: "projects_get", description: "Get a project", inputSchema: GetProjectInput })
   @UseMcpGuards({ canActivate: () => true })
@@ -132,20 +141,24 @@ class ProjectsMcp {
 ## Intercept tool invocations
 
 `@UseMcpInterceptors()` wraps a permitted tool invocation. It accepts
-`McpInterceptor` objects and may be applied to a tools class or a single tool.
+`McpInterceptor` objects or injectable Nest provider classes and may be applied
+to a tools class or a single tool. Provider classes are resolved from the
+application container.
 Interceptors receive the same `McpExecutionContext` as guards, including the
 validated arguments and trusted request context. Class interceptors enter in
 declaration order, then method interceptors; they unwind in reverse order.
 Thrown errors propagate to the standard MCP tool error response.
 
 ```ts
+import { Injectable } from "@nestjs/common";
 import {
   UseMcpInterceptors,
   type McpExecutionContext,
   type McpInterceptor,
 } from "@markygab/nest-mcp";
 
-const timingInterceptor: McpInterceptor = {
+@Injectable()
+class TimingInterceptor implements McpInterceptor {
   async intercept(context: McpExecutionContext, next) {
     const startedAt = Date.now();
 
@@ -155,10 +168,10 @@ const timingInterceptor: McpInterceptor = {
       // Hosts decide whether and where to record this information.
       console.log(context.toolName, Date.now() - startedAt);
     }
-  },
-};
+  }
+}
 
-@UseMcpInterceptors(timingInterceptor)
+@UseMcpInterceptors(TimingInterceptor)
 class ProjectsMcp {
   // @UseMcpInterceptors(...) can also be applied to an @McpTool() method.
 }

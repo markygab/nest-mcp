@@ -1,5 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { DiscoveryService, MetadataScanner, Reflector } from "@nestjs/core";
+import {
+  DiscoveryService,
+  MetadataScanner,
+  ModuleRef,
+  Reflector,
+} from "@nestjs/core";
 
 import {
   MCP_TOOL_METADATA,
@@ -11,7 +16,9 @@ import {
 import type {
   McpDiscoveredTool,
   McpGuard,
+  McpGuardReference,
   McpInterceptor,
+  McpInterceptorReference,
   McpParamMetadata,
   McpToolOptions,
 } from "./mcp.types.js";
@@ -25,6 +32,8 @@ export class McpRegistry {
     private readonly metadataScanner: MetadataScanner,
     @Inject(Reflector)
     private readonly reflector: Reflector,
+    @Inject(ModuleRef)
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   discoverTools(serverName: string): McpDiscoveredTool[] {
@@ -74,22 +83,22 @@ export class McpRegistry {
             ) as McpParamMetadata[] | undefined) ?? [];
 
           const classGuards =
-            this.reflector.get<McpGuard[] | undefined>(
+            this.reflector.get<McpGuardReference[] | undefined>(
               MCP_GUARDS_METADATA,
               metatype,
             ) ?? [];
           const methodGuards =
-            this.reflector.get<McpGuard[] | undefined>(
+            this.reflector.get<McpGuardReference[] | undefined>(
               MCP_GUARDS_METADATA,
               methodRef,
             ) ?? [];
           const classInterceptors =
-            this.reflector.get<McpInterceptor[] | undefined>(
+            this.reflector.get<McpInterceptorReference[] | undefined>(
               MCP_INTERCEPTORS_METADATA,
               metatype,
             ) ?? [];
           const methodInterceptors =
-            this.reflector.get<McpInterceptor[] | undefined>(
+            this.reflector.get<McpInterceptorReference[] | undefined>(
               MCP_INTERCEPTORS_METADATA,
               methodRef,
             ) ?? [];
@@ -97,8 +106,12 @@ export class McpRegistry {
           tools.push({
             annotations: toolMetadata.annotations,
             description: toolMetadata.description,
-            guards: [...classGuards, ...methodGuards],
-            interceptors: [...classInterceptors, ...methodInterceptors],
+            guards: [...classGuards, ...methodGuards].map((guard) =>
+              this.resolveGuard(guard),
+            ),
+            interceptors: [...classInterceptors, ...methodInterceptors].map(
+              (interceptor) => this.resolveInterceptor(interceptor),
+            ),
             handler: methodRef.bind(instance),
             inputSchema: toolMetadata.inputSchema,
             instance,
@@ -112,5 +125,23 @@ export class McpRegistry {
     }
 
     return tools.sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  private resolveGuard(guard: McpGuardReference): McpGuard {
+    if (typeof guard !== "function") {
+      return guard;
+    }
+
+    return this.moduleRef.get(guard, { strict: false });
+  }
+
+  private resolveInterceptor(
+    interceptor: McpInterceptorReference,
+  ): McpInterceptor {
+    if (typeof interceptor !== "function") {
+      return interceptor;
+    }
+
+    return this.moduleRef.get(interceptor, { strict: false });
   }
 }

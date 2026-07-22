@@ -8,6 +8,7 @@ import type {
   ToolAnnotations,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { TObject, TSchema, Static } from "@sinclair/typebox";
+import type { Type as NestType } from "@nestjs/common";
 
 export type McpRequestContext = {
   allowedToolNames?: string[];
@@ -68,6 +69,9 @@ export interface McpGuard {
   canActivate(context: McpExecutionContext): boolean | Promise<boolean>;
 }
 
+/** A guard instance or an injectable Nest provider class implementing it. */
+export type McpGuardReference = McpGuard | NestType<McpGuard>;
+
 /**
  * A hook that wraps a permitted MCP tool invocation.
  */
@@ -77,6 +81,11 @@ export interface McpInterceptor {
     next: () => Promise<unknown>,
   ): Promise<unknown>;
 }
+
+/** An interceptor instance or an injectable Nest provider class implementing it. */
+export type McpInterceptorReference =
+  | McpInterceptor
+  | NestType<McpInterceptor>;
 
 export type McpParamKind = "args" | "context";
 
