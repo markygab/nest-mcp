@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import Ajv, { type ValidateFunction } from "ajv";
-import type { TObject } from "@sinclair/typebox";
+
+import type { McpJsonSchema } from "./mcp.types.js";
 
 @Injectable()
 export class McpValidationService {
@@ -10,7 +11,7 @@ export class McpValidationService {
   });
   private readonly validatorCache = new Map<object, ValidateFunction>();
 
-  getValidator(schema: TObject) {
+  getValidator(schema: McpJsonSchema) {
     const cachedValidator = this.validatorCache.get(schema);
 
     if (cachedValidator) {
@@ -24,7 +25,7 @@ export class McpValidationService {
     return validator;
   }
 
-  validate(schema: TObject, value: unknown) {
+  validate(schema: McpJsonSchema, value: unknown) {
     const validator = this.getValidator(schema);
 
     if (validator(value)) {

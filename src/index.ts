@@ -19,6 +19,7 @@ export type {
   McpGuardReference,
   McpInterceptor,
   McpInterceptorReference,
+  McpJsonSchema,
   McpRequestContext,
   McpToolArgs,
   McpToolDefinition,

@@ -50,6 +50,26 @@ class OtherMcpTools {
   }
 }
 
+const PlainJsonSchema = {
+  type: "object",
+  properties: {
+    projectId: { type: "string" },
+  },
+  required: ["projectId"],
+} as const;
+
+@McpTools("plain_schema_mcp")
+class PlainJsonSchemaMcpTools {
+  @McpTool({
+    description: "Read a project",
+    inputSchema: PlainJsonSchema,
+    name: "projects_read",
+  })
+  readProject() {
+    return {};
+  }
+}
+
 const classGuard = { canActivate: () => true };
 const methodGuard = { canActivate: () => true };
 class ProviderGuard implements McpGuard {
@@ -140,6 +160,26 @@ describe("McpRegistry", () => {
     expect(registry.discoverTools("other_mcp")).toMatchObject([
       { name: "list_other_tasks" },
     ]);
+  });
+
+  it("discovers a tool declared with plain JSON Schema", () => {
+    const registry = new McpRegistry(
+      {
+        getProviders: () => [
+          {
+            instance: new PlainJsonSchemaMcpTools(),
+            metatype: PlainJsonSchemaMcpTools,
+          },
+        ],
+      } as never,
+      new MetadataScanner(),
+      new Reflector(),
+      { get: () => undefined } as never,
+    );
+
+    expect(registry.discoverTools("plain_schema_mcp")[0]?.inputSchema).toBe(
+      PlainJsonSchema,
+    );
   });
 
   it("collects class and method guard and interceptor metadata independently", () => {

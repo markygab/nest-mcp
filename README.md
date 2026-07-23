@@ -92,6 +92,40 @@ Tool names must be unique within a named server. Keep handlers thin: enforce
 application policy and call existing domain services rather than placing
 vendor-client or persistence logic in MCP classes.
 
+## Tool schemas
+
+`@McpTool()` accepts TypeBox schemas and ordinary JSON Schema for both input
+and output. TypeBox remains a convenient authoring option and
+`McpToolArgs<typeof schema>` continues to infer its handler type. For plain
+JSON Schema—such as a schema derived from an OpenAPI document—supply your own
+generated or application type for the handler argument; arbitrary JSON Schema
+is not inferred as TypeScript.
+
+```ts
+const CreateIssueInputSchema = {
+  type: "object",
+  properties: {
+    priority: { type: "string", enum: ["low", "high"] },
+    title: { type: "string" },
+  },
+  required: ["priority", "title"],
+} as const;
+
+type CreateIssueInput = {
+  priority: "low" | "high";
+  title: string;
+};
+
+@McpTool({
+  name: "issues_create",
+  description: "Create an issue",
+  inputSchema: CreateIssueInputSchema,
+})
+createIssue(@McpArgs() input: CreateIssueInput) {
+  return this.issues.create(input);
+}
+```
+
 ## Guard tool invocations
 
 `@UseMcpGuards()` attaches policy-agnostic guards to a tools class or an

@@ -1,5 +1,4 @@
 import { SetMetadata } from "@nestjs/common";
-import type { TObject } from "@sinclair/typebox";
 
 import {
   MCP_TOOL_METADATA,
@@ -13,6 +12,7 @@ import type {
   McpGuardReference,
   McpInterceptor,
   McpInterceptorReference,
+  McpJsonSchema,
   McpParamKind,
   McpParamMetadata,
   McpToolOptions,
@@ -22,8 +22,8 @@ export const McpTools = (serverName: string): ClassDecorator =>
   SetMetadata(MCP_TOOLS_CLASS_METADATA, serverName);
 
 export const McpTool = <
-  TInputSchema extends TObject,
-  TOutputSchema extends TObject | undefined = TObject | undefined,
+  TInputSchema extends McpJsonSchema,
+  TOutputSchema extends McpJsonSchema | undefined = McpJsonSchema | undefined,
 >(
   options: McpToolOptions<TInputSchema, TOutputSchema>,
 ): MethodDecorator => SetMetadata(MCP_TOOL_METADATA, options);

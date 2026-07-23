@@ -2,8 +2,34 @@ import { Type } from "@sinclair/typebox";
 import { describe, expect, it, vi } from "vitest";
 
 import { McpInvoker } from "./mcp.invoker.js";
-import type { McpDiscoveredTool, McpRequestContext } from "./mcp.types.js";
+import type {
+  McpDiscoveredTool,
+  McpRequestContext,
+  McpToolArgs,
+} from "./mcp.types.js";
 import { McpValidationService } from "./mcp.validation.js";
+
+const PlainInputSchema = {
+  type: "object",
+  properties: {
+    details: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+      },
+      required: ["title"],
+    },
+    state: { type: "string", enum: ["draft", "published"] },
+    tags: { type: "array", items: { type: "string" } },
+  },
+  required: ["details", "state", "tags"],
+} as const;
+
+type PlainInput = {
+  details: { title: string };
+  state: "draft" | "published";
+  tags: string[];
+};
 
 describe("McpInvoker", () => {
   it("validates input and injects args and context", async () => {
@@ -64,6 +90,76 @@ describe("McpInvoker", () => {
     await expect(
       invoker.invoke("example_mcp", tool, { query: 42 }, { requestId: "req-1" }),
     ).rejects.toThrow(/should be string/u);
+  });
+
+  it("validates plain JSON Schema input before invoking the handler", async () => {
+    const invoker = new McpInvoker(new McpValidationService());
+    const handler = vi.fn((input: McpToolArgs<typeof PlainInputSchema, PlainInput>) => input);
+    const tool: McpDiscoveredTool = {
+      description: "Plain JSON Schema tool",
+      handler,
+      inputSchema: PlainInputSchema,
+      instance: {},
+      methodName: "plainSchema",
+      name: "plain_schema",
+      params: [{ index: 0, kind: "args" }],
+    };
+    const validInput: PlainInput = {
+      details: { title: "Example" },
+      state: "draft",
+      tags: ["mcp"],
+    };
+
+    await expect(
+      invoker.invoke("example_mcp", tool, validInput, { requestId: "req-1" }),
+    ).resolves.toEqual(validInput);
+    expect(handler).toHaveBeenCalledWith(validInput);
+
+    await expect(
+      invoker.invoke(
+        "example_mcp",
+        tool,
+        { details: { title: "Example" }, state: "invalid", tags: [] },
+        { requestId: "req-1" },
+      ),
+    ).rejects.toThrow(/should be equal to one of the allowed values/u);
+    await expect(
+      invoker.invoke(
+        "example_mcp",
+        tool,
+        { state: "draft", tags: [] },
+        { requestId: "req-1" },
+      ),
+    ).rejects.toThrow(/should have required property 'details'/u);
+  });
+
+  it("validates JSON Schema composition and local $defs references", () => {
+    const validation = new McpValidationService();
+    const schema = {
+      allOf: [
+        {
+          type: "object",
+          properties: { id: { type: "string" } },
+          required: ["id"],
+        },
+        {
+          type: "object",
+          properties: { status: { $ref: "#/$defs/status" } },
+          required: ["status"],
+        },
+      ],
+      $defs: {
+        status: { enum: ["open", "closed"] },
+      },
+    };
+
+    expect(validation.validate(schema, { id: "task-1", status: "open" })).toEqual({
+      id: "task-1",
+      status: "open",
+    });
+    expect(() => validation.validate(schema, { id: "task-1", status: "pending" })).toThrow(
+      /should be equal to one of the allowed values/u,
+    );
   });
 
   it("runs guards in order with validated arguments before invoking the handler", async () => {

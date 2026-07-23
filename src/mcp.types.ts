@@ -7,7 +7,7 @@ import type {
   Tool,
   ToolAnnotations,
 } from "@modelcontextprotocol/sdk/types.js";
-import type { TObject, TSchema, Static } from "@sinclair/typebox";
+import type { TSchema, Static } from "@sinclair/typebox";
 import type { Type as NestType } from "@nestjs/common";
 
 export type McpRequestContext = {
@@ -32,8 +32,8 @@ export type McpRequestContext = {
 };
 
 export type McpToolOptions<
-  TInputSchema extends TObject = TObject,
-  TOutputSchema extends TObject | undefined = TObject | undefined,
+  TInputSchema extends McpJsonSchema = McpJsonSchema,
+  TOutputSchema extends McpJsonSchema | undefined = McpJsonSchema | undefined,
 > = {
   annotations?: ToolAnnotations;
   description: string;
@@ -42,6 +42,14 @@ export type McpToolOptions<
   outputSchema?: TOutputSchema;
   title?: string;
 };
+
+/**
+ * A JSON Schema document accepted by MCP tools.
+ *
+ * TypeBox schemas remain supported because they extend `TSchema`; plain JSON
+ * Schema objects may use any standard or application-defined keyword.
+ */
+export type McpJsonSchema = TSchema | Record<string, unknown>;
 
 /**
  * Context supplied to MCP guards and interceptors after a tool's input has
@@ -100,11 +108,11 @@ export type McpDiscoveredTool = {
   guards?: McpGuard[];
   interceptors?: McpInterceptor[];
   handler: (...args: unknown[]) => Promise<unknown> | unknown;
-  inputSchema: TObject;
+  inputSchema: McpJsonSchema;
   instance: object;
   methodName: string;
   name: string;
-  outputSchema?: TObject;
+  outputSchema?: McpJsonSchema;
   params: McpParamMetadata[];
   title?: string;
 };
@@ -113,4 +121,8 @@ export type McpToolHandlerResult = CallToolResult;
 
 export type McpToolDefinition = Tool;
 
-export type McpToolArgs<TSchemaType extends TSchema> = Static<TSchemaType>;
+/**
+ * Infers TypeBox schemas and otherwise uses the caller-supplied value type.
+ */
+export type McpToolArgs<TSchemaType, TValue = unknown> =
+  TSchemaType extends TSchema ? Static<TSchemaType> : TValue;

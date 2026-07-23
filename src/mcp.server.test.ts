@@ -16,6 +16,22 @@ const tool = {
   params: [],
 };
 
+const plainSchema = {
+  type: "object",
+  properties: {
+    mode: { type: "string", enum: ["preview", "apply"] },
+  },
+  required: ["mode"],
+} as const;
+
+const plainOutputSchema = {
+  type: "object",
+  properties: {
+    created: { type: "boolean" },
+  },
+  required: ["created"],
+} as const;
+
 const createService = (invoke: () => Promise<unknown>) =>
   new McpServerService(
     { create: vi.fn() } as never,
@@ -95,5 +111,27 @@ describe("McpServerService", () => {
       isError: true,
     });
     expect(deniedHandler).not.toHaveBeenCalled();
+  });
+
+  it("advertises a plain JSON Schema without translating it", () => {
+    const service = new McpServerService(
+      { create: vi.fn() } as never,
+      { invoke: vi.fn() } as never,
+      {
+        discoverTools: vi.fn().mockReturnValue([
+          {
+            ...tool,
+            inputSchema: plainSchema,
+            outputSchema: plainOutputSchema,
+          },
+        ]),
+      } as never,
+      { validate: vi.fn() } as never,
+    );
+
+    expect(service.listTools("example_mcp")[0]?.inputSchema).toBe(plainSchema);
+    expect(service.listTools("example_mcp")[0]?.outputSchema).toBe(
+      plainOutputSchema,
+    );
   });
 });
