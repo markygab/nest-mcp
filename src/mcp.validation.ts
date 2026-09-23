@@ -1,13 +1,13 @@
 import { Injectable } from "@nestjs/common";
-import Ajv, { type ValidateFunction } from "ajv";
+import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 
 import type { McpJsonSchema } from "./mcp.types.js";
 
 @Injectable()
 export class McpValidationService {
-  private readonly ajv = new Ajv({
+  private readonly ajv = new Ajv2020({
     allErrors: true,
-    jsonPointers: true,
+    strict: false,
   });
   private readonly validatorCache = new Map<object, ValidateFunction>();
 
@@ -35,9 +35,10 @@ export class McpValidationService {
     const message =
       validator.errors
         ?.map((error) => {
-          const path = error.dataPath || "root";
+          const path = error.instancePath || "root";
+          const message = error.message?.replace(/^must\b/u, "should");
 
-          return `${path}: ${error.message}`;
+          return `${path}: ${message}`;
         })
         .join("; ") ?? "Invalid MCP tool input";
 
