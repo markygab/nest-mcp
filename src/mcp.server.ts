@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -10,6 +10,7 @@ import {
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
 import { McpContextFactory } from "./mcp.context.js";
+import { MCP_MODULE_OPTIONS } from "./mcp.constants.js";
 import {
   assertMcpResponseSize,
   withMcpToolTimeout,
@@ -20,6 +21,7 @@ import type {
   McpDiscoveredTool,
   McpRequestContext,
   McpToolDefinition,
+  NestMcpModuleOptions,
 } from "./mcp.types.js";
 import { McpValidationService } from "./mcp.validation.js";
 
@@ -42,6 +44,9 @@ export class McpServerService {
     private readonly registry: McpRegistry,
     @Inject(McpValidationService)
     private readonly validation: McpValidationService,
+    @Optional()
+    @Inject(MCP_MODULE_OPTIONS)
+    private readonly options?: NestMcpModuleOptions,
   ) {}
 
   async callTool(
@@ -246,7 +251,9 @@ export class McpServerService {
       description: tool.description,
       inputSchema: tool.inputSchema as Tool["inputSchema"],
       name: tool.name,
-      outputSchema: tool.outputSchema as Tool["outputSchema"],
+      ...(this.options?.advertiseOutputSchemas !== false
+        ? { outputSchema: tool.outputSchema as Tool["outputSchema"] }
+        : {}),
       title: tool.title,
     };
   }

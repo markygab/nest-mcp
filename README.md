@@ -26,6 +26,18 @@ import { ProjectsModule } from "./projects/projects.module.js";
 export class AppModule {}
 ```
 
+By default, `tools/list` advertises both input and output schemas. If output
+schemas are an internal contract, configure the module once to omit them from
+MCP tool definitions; declared output schemas are still validated on every
+successful handler result.
+
+```ts
+@Module({
+  imports: [NestMcpModule.forRoot({ advertiseOutputSchemas: false })],
+})
+export class AppModule {}
+```
+
 The package uses Nest's `DiscoveryService` to find decorated providers across
 the application container. Tool classes must still be registered as normal
 Nest providers in their feature modules.

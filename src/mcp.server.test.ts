@@ -134,4 +134,65 @@ describe("McpServerService", () => {
       plainOutputSchema,
     );
   });
+
+  it("hides output schemas from tool definitions when configured", () => {
+    const service = new McpServerService(
+      { create: vi.fn() } as never,
+      { invoke: vi.fn() } as never,
+      {
+        discoverTools: vi.fn().mockReturnValue([
+          { ...tool, outputSchema: plainOutputSchema },
+        ]),
+      } as never,
+      { validate: vi.fn() } as never,
+      { advertiseOutputSchemas: false },
+    );
+
+    const definition = service.listTools("example_mcp")[0];
+
+    expect(definition).not.toHaveProperty("outputSchema");
+  });
+
+  it("still rejects invalid output when output schema advertising is disabled", async () => {
+    const service = new McpServerService(
+      { create: vi.fn() } as never,
+      { invoke: async () => ({ created: "yes" }) } as never,
+      {
+        discoverTools: vi.fn().mockReturnValue([
+          { ...tool, outputSchema: plainOutputSchema },
+        ]),
+      } as never,
+      new McpValidationService(),
+      { advertiseOutputSchemas: false },
+    );
+
+    await expect(
+      service.callTool("example_mcp", "example_tool", {}, { requestId: "request-1" }),
+    ).resolves.toMatchObject({
+      content: [{ text: expect.stringMatching(/should be boolean/u) }],
+      isError: true,
+    });
+  });
+
+  it("preserves structured results when output schema advertising is disabled", async () => {
+    const result = { created: true };
+    const service = new McpServerService(
+      { create: vi.fn() } as never,
+      { invoke: async () => result } as never,
+      {
+        discoverTools: vi.fn().mockReturnValue([
+          { ...tool, outputSchema: plainOutputSchema },
+        ]),
+      } as never,
+      new McpValidationService(),
+      { advertiseOutputSchemas: false },
+    );
+
+    await expect(
+      service.callTool("example_mcp", "example_tool", {}, { requestId: "request-1" }),
+    ).resolves.toEqual({
+      content: [{ text: JSON.stringify(result, null, 2), type: "text" }],
+      structuredContent: result,
+    });
+  });
 });

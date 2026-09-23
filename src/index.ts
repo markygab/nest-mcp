@@ -24,4 +24,5 @@ export type {
   McpToolArgs,
   McpToolDefinition,
   McpToolOptions,
+  NestMcpModuleOptions,
 } from "./mcp.types.js";

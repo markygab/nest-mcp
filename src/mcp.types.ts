@@ -31,6 +31,16 @@ export type McpRequestContext = {
   workflowId?: string;
 };
 
+/** Global configuration for {@link NestMcpModule.forRoot}. */
+export type NestMcpModuleOptions = {
+  /**
+   * Whether MCP tool definitions expose output schemas. Internal output
+   * validation always remains enabled when a tool declares an output schema.
+   * @default true
+   */
+  advertiseOutputSchemas?: boolean;
+};
+
 export type McpToolOptions<
   TInputSchema extends McpJsonSchema = McpJsonSchema,
   TOutputSchema extends McpJsonSchema | undefined = McpJsonSchema | undefined,
