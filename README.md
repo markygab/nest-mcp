@@ -191,8 +191,14 @@ class ProjectsMcp {
 to a tools class or a single tool. Provider classes are resolved from the
 application container.
 Interceptors receive the same `McpExecutionContext` as guards, including the
-validated arguments and trusted request context. Class interceptors enter in
-declaration order, then method interceptors; they unwind in reverse order.
+validated arguments and trusted request context. Configure
+`NestMcpModule.forRoot({ serverInterceptors: { projects_mcp: [TimingInterceptor] } })`
+to intercept all tools on one named server without decorating each provider.
+Register injectable interceptor classes as Nest providers. Server interceptors
+wrap class interceptors, which wrap method interceptors. Each group enters in
+declaration order; they unwind in reverse order. Input validation and guards
+run before any interceptor. The same chain runs for SDK transports and direct
+`McpServerService.callTool()` calls.
 Thrown errors propagate to the standard MCP tool error response.
 
 ```ts
@@ -222,6 +228,11 @@ class ProjectsMcp {
   // @UseMcpInterceptors(...) can also be applied to an @McpTool() method.
 }
 ```
+
+Tool definitions may include `metadata: { weight: 5 }` in `@McpTool({...})`.
+This application-defined data is available as `context.toolOptions.metadata`
+in guards and interceptors. The library does not interpret it or include it
+in MCP tool listings. Use `annotations` for hints intended for MCP clients.
 
 ## Request context and policy
 

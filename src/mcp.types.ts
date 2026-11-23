@@ -39,6 +39,10 @@ export type NestMcpModuleOptions = {
    * @default true
    */
   advertiseOutputSchemas?: boolean;
+  /** Interceptors keyed by server name. They wrap provider and method interceptors. */
+  serverInterceptors?: Readonly<
+    Record<string, readonly McpInterceptorReference[]>
+  >;
 };
 
 export type McpToolOptions<
@@ -48,6 +52,8 @@ export type McpToolOptions<
   annotations?: ToolAnnotations;
   description: string;
   inputSchema: TInputSchema;
+  /** Host-only metadata for guards and interceptors, not exposed in tool listings. */
+  metadata?: Readonly<Record<string, unknown>>;
   name: string;
   outputSchema?: TOutputSchema;
   title?: string;
@@ -120,6 +126,7 @@ export type McpDiscoveredTool = {
   handler: (...args: unknown[]) => Promise<unknown> | unknown;
   inputSchema: McpJsonSchema;
   instance: object;
+  metadata?: McpToolOptions["metadata"];
   methodName: string;
   name: string;
   outputSchema?: McpJsonSchema;
