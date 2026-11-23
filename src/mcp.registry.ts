@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import {
   DiscoveryService,
   MetadataScanner,
@@ -12,6 +12,7 @@ import {
   MCP_TOOLS_CLASS_METADATA,
   MCP_GUARDS_METADATA,
   MCP_INTERCEPTORS_METADATA,
+  MCP_MODULE_OPTIONS,
 } from "./mcp.constants.js";
 import type {
   McpDiscoveredTool,
@@ -21,6 +22,7 @@ import type {
   McpInterceptorReference,
   McpParamMetadata,
   McpToolOptions,
+  NestMcpModuleOptions,
 } from "./mcp.types.js";
 
 @Injectable()
@@ -34,11 +36,19 @@ export class McpRegistry {
     private readonly reflector: Reflector,
     @Inject(ModuleRef)
     private readonly moduleRef: ModuleRef,
+    @Optional()
+    @Inject(MCP_MODULE_OPTIONS)
+    private readonly options?: NestMcpModuleOptions,
   ) {}
 
   discoverTools(serverName: string): McpDiscoveredTool[] {
     const providers = this.discovery.getProviders();
     const tools: McpDiscoveredTool[] = [];
+    const configuredInterceptors = this.options?.serverInterceptors;
+    const serverInterceptors =
+      configuredInterceptors && Object.hasOwn(configuredInterceptors, serverName)
+        ? (configuredInterceptors[serverName] ?? [])
+        : [];
 
     for (const provider of providers) {
       const instance = provider.instance;
@@ -109,12 +119,17 @@ export class McpRegistry {
             guards: [...classGuards, ...methodGuards].map((guard) =>
               this.resolveGuard(guard),
             ),
-            interceptors: [...classInterceptors, ...methodInterceptors].map(
-              (interceptor) => this.resolveInterceptor(interceptor),
-            ),
+            interceptors: [
+              ...serverInterceptors,
+              ...classInterceptors,
+              ...methodInterceptors,
+            ].map((interceptor) => this.resolveInterceptor(interceptor)),
             handler: methodRef.bind(instance),
             inputSchema: toolMetadata.inputSchema,
             instance,
+            ...(toolMetadata.metadata === undefined
+              ? {}
+              : { metadata: toolMetadata.metadata }),
             methodName,
             name: toolMetadata.name,
             outputSchema: toolMetadata.outputSchema,

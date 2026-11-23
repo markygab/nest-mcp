@@ -30,6 +30,7 @@ export class McpInvoker {
         annotations: tool.annotations,
         description: tool.description,
         inputSchema: tool.inputSchema,
+        ...(tool.metadata === undefined ? {} : { metadata: tool.metadata }),
         name: tool.name,
         outputSchema: tool.outputSchema,
         title: tool.title,
